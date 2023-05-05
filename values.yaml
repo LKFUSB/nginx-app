@@ -1,0 +1,53 @@
+replicaCount: 2
+
+namespace:
+  name: ingress-nginx
+
+image::
+  repository: nginx
+  tag: "1.16.0"
+  pullPolicy: Always
+
+service:
+  name: nginx-app-service
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+env:
+  name: dev
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 8m
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_cache static-cache;
+      proxy_cache_revalidate on;
+      proxy_cache_min_uses 2;
+      proxy_cache_valid 200 302 5m;
+      proxy_cache_valid 404      1m;
+      proxy_cache_valid any 10m;
+      proxy_cache_use_stale error timeout updating http_404 http_500 http_502 http_503 ht$
+      proxy_cache_background_update on;
+      proxy_cache_lock on;
+      add_header X-Cache-Status $upstream_cache_status;
+
+
+  hosts:
+    - host: ktd.pw
+      paths:
+        - path: /app
+          pathType: Prefix
+          backend:
+            service:
+              name: nginx-app-service
+              port:
+                number: 80
+  tls:
+   - secretName: ktd-secret
+     hosts:
+       - ktd.pw
